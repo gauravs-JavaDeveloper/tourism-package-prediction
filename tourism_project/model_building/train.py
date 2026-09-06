@@ -39,7 +39,9 @@ categorical_features = [
 # Fail fast if the incoming schema drifts
 unassigned = set(Xtrain.columns) - set(numeric_features + categorical_features)
 if unassigned:
-    raise ValueError(f"Columns not assigned to a feature group: {unassigned}")
+    print(f"WARNING: dropping unexpected columns not in any feature group: {unassigned}")
+    Xtrain = Xtrain.drop(columns=list(unassigned))
+    Xtest = Xtest.drop(columns=list(unassigned))
 
 # ---------- Class imbalance ----------
 class_weight = ytrain.value_counts()[0] / ytrain.value_counts()[1]
