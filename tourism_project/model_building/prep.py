@@ -4,30 +4,24 @@ from sklearn.model_selection import train_test_split
 df = pd.read_csv("tourism_project/data/tourism.csv")
 
 # ---------- Cleaning ----------
-# CustomerID is a pure identifier with no predictive value
-df.drop(columns=["CustomerID"], inplace=True)
+# Drop CustomerID and any stray index columns that leaked in from a CSV
+# export (e.g. "Unnamed: 0", or a duplicate "Unnamed: 0.1" from a re-export).
+cols_to_drop = ["CustomerID"] + [c for c in df.columns if c.startswith("Unnamed")]
+df.drop(columns=cols_to_drop, inplace=True, errors="ignore")
+print("Dropped columns:", cols_to_drop)
 
 # 'Gender' contains a data-entry artifact: "Fe Male" alongside "Female".
-# Left uncorrected, the one-hot encoder would create a spurious third gender category.
 df["Gender"] = df["Gender"].replace({"Fe Male": "Female"})
 print("Gender categories after cleaning:", sorted(df["Gender"].dropna().unique().tolist()))
 
-# Drop any exact duplicate rows introduced upstream
 before = df.shape[0]
 df.drop_duplicates(inplace=True)
 print(f"Dropped {before - df.shape[0]} duplicate rows.")
 
-# NOTE: categorical columns are intentionally left as raw strings, and missing
-# values are intentionally left unimputed. Both are handled inside the training
-# pipeline so that training and serving use identical transformations, and so
-# that imputation statistics are fitted on the training fold only.
-
-# ---------- Split ----------
 target_col = "ProdTaken"
 X = df.drop(columns=[target_col])
 y = df[target_col]
 
-# stratify=y keeps the (imbalanced) purchase ratio consistent across splits
 Xtrain, Xtest, ytrain, ytest = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
